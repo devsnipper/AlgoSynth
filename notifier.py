@@ -73,3 +73,11 @@ def notify_stop(daily_pnl: float):
         f"{emoji} Bot arrêté\n"
         f"💰 PnL final journalier : {daily_pnl:.2f} $"
     )
+
+
+def notify_heartbeat():
+    send("💓 Bot actif")
+
+
+def notify_report(report: str):
+    send(report)
