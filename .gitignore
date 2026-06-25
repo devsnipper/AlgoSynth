@@ -1,0 +1,19 @@
+# Credentials — ne jamais committer
+.env
+
+# Environnement Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs trades
+logs/
+
+# Jupyter
+.ipynb_checkpoints/
+notebook.ipynb
+
+# OS
+.DS_Store
+Thumbs.db
