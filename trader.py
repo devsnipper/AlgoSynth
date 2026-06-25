@@ -1,6 +1,7 @@
 import MetaTrader5 as mt5
 import csv
 import os
+import time
 from datetime import datetime
 from config import LOT, TP_POINTS, SL_POINTS, MAGIC
 
@@ -11,7 +12,7 @@ def _init_log():
     if not os.path.exists(LOG_FILE):
         with open(LOG_FILE, "w", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow(["time", "symbol", "direction", "entry", "exit", "profit"])
+            writer.writerow(["date", "heure", "symbol", "direction", "lot", "entry", "exit", "profit"])
 
 
 def has_open_position(symbol: str) -> bool:
@@ -88,10 +89,15 @@ def close_trade(symbol: str, ticket: int, entry_price: float, direction: str) ->
         "type_filling": mt5.ORDER_FILLING_FOK,
     }
 
-    result = mt5.order_send(request)
-    if result is None or result.retcode != mt5.TRADE_RETCODE_DONE:
+    for attempt in range(3):
+        result = mt5.order_send(request)
+        if result is not None and result.retcode == mt5.TRADE_RETCODE_DONE:
+            break
         code = result.retcode if result else "None"
-        print(f"[TRADER] Fermeture refusee ({code}) sur {symbol}")
+        print(f"[TRADER] Fermeture refusee ({code}) sur {symbol} — tentative {attempt + 1}/3")
+        time.sleep(1)
+    else:
+        print(f"[TRADER] Fermeture impossible apres 3 tentatives sur {symbol}")
         return None
 
     profit = pos.profit
@@ -100,8 +106,8 @@ def close_trade(symbol: str, ticket: int, entry_price: float, direction: str) ->
     with open(LOG_FILE, "a", newline="") as f:
         writer = csv.writer(f)
         writer.writerow([
-            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            symbol, direction, entry_price, close_price, profit
+            datetime.now().strftime("%Y-%m-%d"), datetime.now().strftime("%H:%M:%S"),
+            symbol, direction, LOT, entry_price, close_price, profit
         ])
     return profit
 
@@ -122,7 +128,21 @@ def monitor_trade(symbol: str, ticket: int, entry_price: float, direction: str) 
     while True:
         positions = mt5.positions_get(symbol=symbol)
         if not positions or not any(p.ticket == ticket for p in positions):
-            print(f"[TRADER] Position {ticket} introuvable, boucle stoppee")
+            # Position fermée par MT5 (spike, déconnexion...) — récupérer le profit réel
+            deals = mt5.history_deals_get(position=ticket)
+            if deals:
+                profit = sum(d.profit for d in deals)
+                exit_price = deals[-1].price
+                print(f"[TRADER] Position {ticket} fermee par MT5 | profit={profit:.2f}")
+                _init_log()
+                with open(LOG_FILE, "a", newline="") as f:
+                    writer = csv.writer(f)
+                    writer.writerow([
+                        datetime.now().strftime("%Y-%m-%d"), datetime.now().strftime("%H:%M:%S"),
+                        symbol, direction, LOT, entry_price, exit_price, profit
+                    ])
+                return profit
+            print(f"[TRADER] Position {ticket} introuvable, aucun deal trouve")
             return None
 
         tick = mt5.symbol_info_tick(symbol)

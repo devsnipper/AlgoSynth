@@ -31,7 +31,7 @@ def _calc_pips(row):
 def _filter_by_period(trades, date_from: date, date_to: date):
     result = []
     for t in trades:
-        d = datetime.strptime(t["time"], "%Y-%m-%d %H:%M:%S").date()
+        d = datetime.strptime(t["date"], "%Y-%m-%d").date()
         if date_from <= d <= date_to:
             result.append(t)
     return result

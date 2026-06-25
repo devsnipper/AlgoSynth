@@ -17,10 +17,10 @@ EMA_SLOW   = 50
 CANDLES_NB = 100   # nb de candles a recuperer (on utilise les fermees : index 1+)
 
 # ── Gestion des trades ────────────────────────────────────────────────────────
-LOT          = 0.20    # lot minimum Deriv
+LOT          = 0.55   # lot minimum Deriv
 TP_POINTS    = 150     # take profit en points
 SL_POINTS    = 100     # stop loss en points
-MAX_TRADES   = 20      # max trades par jour (toutes paires confondues)
+MAX_TRADES   = 999999  # pas de limite
 MAGIC        = 123456  # identifiant unique du bot
 
 # ── Spike filter ──────────────────────────────────────────────────────────────

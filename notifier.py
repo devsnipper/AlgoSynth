@@ -14,7 +14,7 @@ def send(message: str):
         print(f"[NOTIFIER] Telegram non configure | {message}")
         return
     try:
-        requests.post(URL, data={"chat_id": CHAT_ID, "text": message}, timeout=5)
+        requests.post(URL, data={"chat_id": CHAT_ID, "text": message}, timeout=60)
     except Exception as e:
         print(f"[NOTIFIER] Erreur envoi Telegram : {e}")
 
