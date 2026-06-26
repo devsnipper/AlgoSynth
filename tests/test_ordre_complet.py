@@ -13,7 +13,7 @@ import csv
 
 load_dotenv()
 
-SYMBOL    = "Boom 1000 Index.0"
+SYMBOL    = "Boom 1000 Index"
 DIRECTION = "sell"
 
 

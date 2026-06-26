@@ -22,7 +22,7 @@ from config import LOT, MAGIC
 
 load_dotenv()
 
-SYMBOL    = "Boom 1000 Index.0"
+SYMBOL    = "Boom 1000 Index"
 DIRECTION = "buy"   # contre-tendance → SL probable rapidement
 TP_PTS    = 500     # TP loin pour ne pas le toucher pendant le test
 SL_PTS    = 30      # SL serré pour que MT5 le ferme vite
