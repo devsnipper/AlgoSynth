@@ -5,7 +5,8 @@ import time
 from datetime import datetime
 from config import LOT, TP_POINTS, SL_POINTS, MAGIC
 
-LOG_FILE = os.path.join(os.path.dirname(__file__), "logs", "trades.csv")
+LOG_FILE    = os.path.join(os.path.dirname(__file__), "logs", "trades.csv")
+ORDER_LOG   = os.path.join(os.path.dirname(__file__), "logs", "orders.csv")
 
 
 def _init_log():
@@ -15,13 +16,30 @@ def _init_log():
             writer.writerow(["date", "heure", "symbol", "direction", "lot", "entry", "exit", "profit"])
 
 
+def _init_order_log():
+    if not os.path.exists(ORDER_LOG):
+        with open(ORDER_LOG, "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["date", "heure", "type", "symbol", "direction", "prix", "retcode", "statut"])
+
+
+def _log_order(order_type: str, symbol: str, direction: str, prix: float, retcode, statut: str):
+    _init_order_log()
+    with open(ORDER_LOG, "a", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow([
+            datetime.now().strftime("%Y-%m-%d"),
+            datetime.now().strftime("%H:%M:%S"),
+            order_type, symbol, direction, prix, retcode, statut
+        ])
+
+
 def has_open_position(symbol: str) -> bool:
     positions = mt5.positions_get(symbol=symbol)
     return positions is not None and len(positions) > 0
 
 
 def open_trade(symbol: str, direction: str) -> int | None:
-    """Ouvre un trade sans SL/TP (gere par Python). Retourne le ticket ou None."""
     tick = mt5.symbol_info_tick(symbol)
     if tick is None:
         return None
@@ -34,29 +52,30 @@ def open_trade(symbol: str, direction: str) -> int | None:
         price = tick.bid
 
     request = {
-        "action":      mt5.TRADE_ACTION_DEAL,
-        "symbol":      symbol,
-        "volume":      LOT,
-        "type":        order_type,
-        "price":       price,
-        "deviation":   10,
-        "magic":       MAGIC,
-        "comment":     "deriv-scalper",
+        "action":       mt5.TRADE_ACTION_DEAL,
+        "symbol":       symbol,
+        "volume":       LOT,
+        "type":         order_type,
+        "price":        price,
+        "deviation":    50,
+        "magic":        MAGIC,
+        "comment":      "deriv-scalper",
         "type_filling": mt5.ORDER_FILLING_FOK,
     }
 
     result = mt5.order_send(request)
     if result is None or result.retcode != mt5.TRADE_RETCODE_DONE:
         code = result.retcode if result else "None"
-        print(f"[TRADER] Ordre refuse ({code}) sur {symbol}")
+        print(f"[TRADER] Ouverture refusee ({code}) sur {symbol}")
+        _log_order("OPEN", symbol, direction, price, code, "REFUSE")
         return None
 
     print(f"[TRADER] Trade ouvert  | {direction.upper()} {symbol} @ {price} | ticket={result.order}")
+    _log_order("OPEN", symbol, direction, price, result.retcode, "OK")
     return result.order
 
 
 def close_trade(symbol: str, ticket: int, entry_price: float, direction: str) -> float | None:
-    """Ferme la position et log le trade. Retourne le profit ou None."""
     positions = mt5.positions_get(symbol=symbol)
     if not positions:
         return None
@@ -65,58 +84,55 @@ def close_trade(symbol: str, ticket: int, entry_price: float, direction: str) ->
     if pos is None:
         return None
 
-    tick = mt5.symbol_info_tick(symbol)
-    if tick is None:
-        return None
-
     if direction == "buy":
-        close_type  = mt5.ORDER_TYPE_SELL
-        close_price = tick.bid
+        close_type = mt5.ORDER_TYPE_SELL
     else:
-        close_type  = mt5.ORDER_TYPE_BUY
-        close_price = tick.ask
+        close_type = mt5.ORDER_TYPE_BUY
 
-    request = {
-        "action":      mt5.TRADE_ACTION_DEAL,
-        "symbol":      symbol,
-        "volume":      LOT,
-        "type":        close_type,
-        "position":    ticket,
-        "price":       close_price,
-        "deviation":   10,
-        "magic":       MAGIC,
-        "comment":     "deriv-scalper-close",
-        "type_filling": mt5.ORDER_FILLING_FOK,
-    }
+    for attempt in range(10):
+        tick = mt5.symbol_info_tick(symbol)
+        if tick is None:
+            time.sleep(0.5)
+            continue
 
-    for attempt in range(3):
+        close_price = tick.bid if direction == "buy" else tick.ask
+
+        request = {
+            "action":       mt5.TRADE_ACTION_DEAL,
+            "symbol":       symbol,
+            "volume":       LOT,
+            "type":         close_type,
+            "position":     ticket,
+            "price":        close_price,
+            "deviation":    50,
+            "magic":        MAGIC,
+            "comment":      "deriv-scalper-close",
+            "type_filling": mt5.ORDER_FILLING_FOK,
+        }
+
         result = mt5.order_send(request)
         if result is not None and result.retcode == mt5.TRADE_RETCODE_DONE:
-            break
-        code = result.retcode if result else "None"
-        print(f"[TRADER] Fermeture refusee ({code}) sur {symbol} — tentative {attempt + 1}/3")
-        time.sleep(1)
-    else:
-        print(f"[TRADER] Fermeture impossible apres 3 tentatives sur {symbol}")
-        return None
+            print(f"[TRADER] Trade ferme   | {symbol} | profit={pos.profit:.2f}")
+            _log_order("CLOSE", symbol, direction, close_price, result.retcode, "OK")
+            _init_log()
+            with open(LOG_FILE, "a", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow([
+                    datetime.now().strftime("%Y-%m-%d"), datetime.now().strftime("%H:%M:%S"),
+                    symbol, direction, LOT, entry_price, close_price, pos.profit
+                ])
+            return pos.profit
 
-    profit = pos.profit
-    print(f"[TRADER] Trade ferme   | {symbol} | profit={profit:.2f}")
-    _init_log()
-    with open(LOG_FILE, "a", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow([
-            datetime.now().strftime("%Y-%m-%d"), datetime.now().strftime("%H:%M:%S"),
-            symbol, direction, LOT, entry_price, close_price, profit
-        ])
-    return profit
+        code = result.retcode if result else "None"
+        print(f"[TRADER] Fermeture refusee ({code}) sur {symbol} — tentative {attempt + 1}/10")
+        _log_order("CLOSE", symbol, direction, close_price, code, f"REFUSE_{attempt+1}")
+        time.sleep(0.5)
+
+    print(f"[TRADER] Fermeture impossible apres 10 tentatives sur {symbol}")
+    return None
 
 
 def monitor_trade(symbol: str, ticket: int, entry_price: float, direction: str) -> float | None:
-    """
-    Surveille le prix tick par tick.
-    Ferme quand TP ou SL est atteint. Retourne le profit ou None si position deja fermee.
-    """
     info = mt5.symbol_info(symbol)
     if info is None:
         return None
@@ -128,7 +144,6 @@ def monitor_trade(symbol: str, ticket: int, entry_price: float, direction: str) 
     while True:
         positions = mt5.positions_get(symbol=symbol)
         if not positions or not any(p.ticket == ticket for p in positions):
-            # Position fermée par MT5 (spike, déconnexion...) — récupérer le profit réel
             deals = mt5.history_deals_get(position=ticket)
             if deals:
                 profit = sum(d.profit for d in deals)

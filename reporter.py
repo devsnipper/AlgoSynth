@@ -8,6 +8,8 @@ LOG_FILE = os.path.join(os.path.dirname(__file__), "logs", "trades.csv")
 POINTS_PER_PIP = {
     "Crash 1000 Index.0": 1.0,
     "Boom 1000 Index.0":  1.0,
+    "Crash 1000 Index":   1.0,
+    "Boom 1000 Index":    1.0,
 }
 
 
