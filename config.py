@@ -2,8 +2,12 @@ import MetaTrader5 as mt5
 
 # ── Symboles ──────────────────────────────────────────────────────────────────
 SYMBOLS = {
-    "crash": "Crash 1000 Index",
-    "boom":  "Boom 1000 Index",
+    "boom150":   "Boom 150 Index",
+    "crash150":  "Crash 150 Index",
+    "crash500":  "Crash 500 Index",
+    "crash1000": "Crash 1000 Index",
+    "boom500":   "Boom 500 Index",
+    "boom900":   "Boom 900 Index",
 }
 
 # ── Timeframes ────────────────────────────────────────────────────────────────
@@ -17,9 +21,19 @@ EMA_SLOW   = 50
 CANDLES_NB = 100   # nb de candles a recuperer (on utilise les fermees : index 1+)
 
 # ── Gestion des trades ────────────────────────────────────────────────────────
-LOT          = 0.55   # lot minimum Deriv
-TP_POINTS    = 2000    # ~0.11 USD net par trade
-SL_POINTS    = 10000  # SL au dela du spread
+RISK_USD  = 0.30   # risque max par trade en USD — lot calcule dynamiquement
+
+# TP/SL par indice — lot retire, calcule depuis RISK_USD a l'ouverture
+TP_CONFIG = {
+    "Boom 150 Index":   {"tp": 2000, "sl": 2294},
+    "Crash 150 Index":  {"tp": 2000, "sl": 2368},
+    "Crash 500 Index":  {"tp": 2000, "sl": 1361},
+    "Crash 1000 Index": {"tp": 2000, "sl": 14219},
+    "Boom 500 Index":   {"tp": 2000, "sl": 1844},
+    "Boom 900 Index":   {"tp": 2000, "sl": 2041},
+}
+TP_POINTS    = 2000   # fallback
+SL_POINTS    = 2000   # fallback
 MAX_TRADES   = 999999  # pas de limite
 MAGIC        = 123456  # identifiant unique du bot
 

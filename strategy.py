@@ -38,8 +38,19 @@ def check_trend_m15(symbol: str) -> str | None:
     return None
 
 
+def is_atr_calm(symbol: str) -> bool:
+    """Retourne True si la volatilite actuelle est sous le 80e percentile recent (auto-calibre par indice)."""
+    rates = mt5.copy_rates_from_pos(symbol, TF_SIGNAL, 1, 50)
+    if rates is None or len(rates) < 10:
+        return True
+    tr_values = sorted([r["high"] - r["low"] for r in rates])
+    current_tr   = tr_values[-1]
+    threshold_80 = tr_values[int(len(tr_values) * 0.80)]
+    return current_tr < threshold_80
+
+
 def check_signal_m1(symbol: str, direction: str) -> bool:
-    """Verifie le croisement EMA M1 + prix au-dessus/dessous EMA50."""
+    """Croisement EMA5/13 au-dessus/dessous EMA50 en M1 + filtre ATR percentile."""
     df = get_candles(symbol, TF_SIGNAL)
     if len(df) < 2:
         return False
@@ -47,17 +58,18 @@ def check_signal_m1(symbol: str, direction: str) -> bool:
 
     prev = df.iloc[-2]
     last = df.iloc[-1]
-    price = last["close"]
 
     if direction == "buy":
-        crossed_up = prev["ema_fast"] <= prev["ema_mid"] and last["ema_fast"] > last["ema_mid"]
-        above_slow = price > last["ema_slow"]
-        return crossed_up and above_slow
+        crossed_up  = prev["ema_fast"] <= prev["ema_mid"] and last["ema_fast"] > last["ema_mid"]
+        above_slow  = last["ema_fast"] > last["ema_slow"] and last["ema_mid"] > last["ema_slow"]
+        calm        = is_atr_calm(symbol)
+        return crossed_up and above_slow and calm
 
     if direction == "sell":
         crossed_down = prev["ema_fast"] >= prev["ema_mid"] and last["ema_fast"] < last["ema_mid"]
-        below_slow   = price < last["ema_slow"]
-        return crossed_down and below_slow
+        below_slow   = last["ema_fast"] < last["ema_slow"] and last["ema_mid"] < last["ema_slow"]
+        calm         = is_atr_calm(symbol)
+        return crossed_down and below_slow and calm
 
     return False
 

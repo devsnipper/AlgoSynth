@@ -5,7 +5,7 @@ from datetime import datetime, date
 import calendar
 from dotenv import load_dotenv
 
-from config   import SYMBOLS, MAX_TRADES
+from config   import SYMBOLS, MAX_TRADES, TP_CONFIG
 from strategy import check_trend_m15, check_signal_m1, is_spike
 from trader   import has_open_position, open_trade, monitor_trade
 from notifier import (
@@ -13,7 +13,7 @@ from notifier import (
     notify_spike, notify_max_trades, notify_stop, notify_heartbeat, notify_report
 )
 from reporter import (
-    daily_report, weekly_report, monthly_report, load_today_trade_count
+    daily_report, weekly_report, monthly_report, load_today_trade_count, load_today_pnl
 )
 
 HEARTBEAT_SEC = 30 * 60  # 30 minutes
@@ -43,11 +43,11 @@ def run():
         return
 
     info           = mt5.account_info()
-    daily_pnl      = 0.0
     last_heartbeat = time.time()
 
-    # Reprendre le compteur du jour si le bot redémarre
+    # Reprendre le compteur et le PnL du jour si le bot redémarre
     trade_count  = load_today_trade_count()
+    daily_pnl    = load_today_pnl()
     current_date = date.today()
 
     if trade_count > 0:
@@ -74,7 +74,14 @@ def run():
                 continue
 
             for key, symbol in SYMBOLS.items():
-                direction_map = {"crash": "buy", "boom": "sell"}
+                direction_map = {
+                    "boom150":   "sell",
+                    "crash150":  "buy",
+                    "crash500":  "buy",
+                    "crash1000": "buy",
+                    "boom500":   "sell",
+                    "boom900":   "sell",
+                }
                 expected_dir  = direction_map[key]
 
                 # 1. Pas de trade actif sur ce symbole
@@ -90,16 +97,17 @@ def run():
                 if not check_signal_m1(symbol, expected_dir):
                     continue
 
-                # 4. Spike filter
+                # 4. Spike filter (tick)
                 if is_spike(symbol):
                     print(f"[MAIN] Spike detecte sur {symbol}")
                     notify_spike(symbol)
                     continue
 
-                # 5. Ouvrir le trade
+                # 5. Ouvrir le trade — SL serveur strict, TP bot-side uniquement
                 tick        = mt5.symbol_info_tick(symbol)
                 entry_price = tick.ask if expected_dir == "buy" else tick.bid
-                ticket      = open_trade(symbol, expected_dir)
+                cfg         = TP_CONFIG.get(symbol, {})
+                ticket      = open_trade(symbol, expected_dir, sl_points=cfg.get("sl"))
 
                 if ticket is None:
                     continue
@@ -108,7 +116,9 @@ def run():
                 notify_trade_open(symbol, expected_dir, entry_price)
 
                 # 6. Surveiller jusqu'a TP ou SL
-                profit = monitor_trade(symbol, ticket, entry_price, expected_dir)
+                cfg    = TP_CONFIG.get(symbol, {})
+                profit = monitor_trade(symbol, ticket, entry_price, expected_dir,
+                                       tp_points=cfg.get("tp"), sl_points=cfg.get("sl"))
 
                 if profit is not None:
                     daily_pnl += profit

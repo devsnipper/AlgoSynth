@@ -10,6 +10,12 @@ POINTS_PER_PIP = {
     "Boom 1000 Index.0":  1.0,
     "Crash 1000 Index":   1.0,
     "Boom 1000 Index":    1.0,
+    "Crash 500 Index":    1.0,
+    "Crash 300 Index":    1.0,
+    "Crash 900 Index":    1.0,
+    "Boom 300 Index":     1.0,
+    "Boom 600 Index":     1.0,
+    "Boom 900 Index":     1.0,
 }
 
 
@@ -123,3 +129,9 @@ def load_today_trade_count() -> int:
     """Recharge le nombre de trades deja faits aujourd'hui au demarrage du bot."""
     trades = _filter_by_period(_read_trades(), date.today(), date.today())
     return len(trades)
+
+
+def load_today_pnl() -> float:
+    """Recharge le PnL cumule du jour au demarrage du bot."""
+    trades = _filter_by_period(_read_trades(), date.today(), date.today())
+    return sum(float(t["profit"]) for t in trades)
