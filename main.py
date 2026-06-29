@@ -56,6 +56,11 @@ def run():
     notify_start(info.balance, info.currency)
     print(f"[MAIN] Connecte | Balance={info.balance} {info.currency}")
 
+    active_symbols = set()   # symboles dont monitor_trade est en cours
+    cooldown       = {}      # symbole -> timestamp fin de cooldown apres perte
+
+    COOLDOWN_SEC = 120  # 2 minutes de pause apres un SL
+
     try:
         while True:
             now  = datetime.now()
@@ -78,32 +83,43 @@ def run():
                     "boom150":   "sell",
                     "crash150":  "buy",
                     "crash500":  "buy",
-                    "crash1000": "buy",
+                    "boom600":   "sell",
                     "boom500":   "sell",
                     "boom900":   "sell",
                 }
                 expected_dir  = direction_map[key]
 
-                # 1. Pas de trade actif sur ce symbole
+                # 1. Symbole deja surveille par monitor_trade
+                if symbol in active_symbols:
+                    continue
+
+                # 2. Cooldown post-perte actif
+                if time.time() < cooldown.get(symbol, 0):
+                    remaining = int(cooldown[symbol] - time.time())
+                    print(f"[MAIN] Cooldown {symbol} — {remaining}s restantes")
+                    continue
+
+                # 3. Pas de trade actif sur ce symbole
                 if has_open_position(symbol):
                     continue
 
-                # 2. Tendance M15
+                # 4. Tendance M15
                 trend = check_trend_m15(symbol)
                 if trend != expected_dir:
                     continue
 
-                # 3. Signal M1
+                # 5. Signal M1
                 if not check_signal_m1(symbol, expected_dir):
                     continue
 
-                # 4. Spike filter (tick)
+                # 6. Spike filter (tick + bougie progressive)
                 if is_spike(symbol):
                     print(f"[MAIN] Spike detecte sur {symbol}")
                     notify_spike(symbol)
+                    cooldown[symbol] = time.time() + COOLDOWN_SEC
                     continue
 
-                # 5. Ouvrir le trade — SL serveur strict, TP bot-side uniquement
+                # 7. Ouvrir le trade — SL serveur strict, TP bot-side uniquement
                 tick        = mt5.symbol_info_tick(symbol)
                 entry_price = tick.ask if expected_dir == "buy" else tick.bid
                 cfg         = TP_CONFIG.get(symbol, {})
@@ -115,14 +131,20 @@ def run():
                 trade_count += 1
                 notify_trade_open(symbol, expected_dir, entry_price)
 
-                # 6. Surveiller jusqu'a TP ou SL
+                # 8. Surveiller jusqu'a TP ou SL
+                active_symbols.add(symbol)
                 cfg    = TP_CONFIG.get(symbol, {})
                 profit = monitor_trade(symbol, ticket, entry_price, expected_dir,
                                        tp_points=cfg.get("tp"), sl_points=cfg.get("sl"))
+                active_symbols.discard(symbol)
 
                 if profit is not None:
                     daily_pnl += profit
                     notify_trade_close(symbol, profit, daily_pnl)
+                    # Cooldown apres une perte
+                    if profit < 0:
+                        cooldown[symbol] = time.time() + COOLDOWN_SEC
+                        print(f"[MAIN] Cooldown 120s sur {symbol} apres perte {profit:.2f}")
 
             # Heartbeat toutes les 30 minutes
             if time.time() - last_heartbeat >= HEARTBEAT_SEC:
