@@ -23,6 +23,40 @@ def add_emas(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def get_trend_report(symbols: dict, direction_map: dict) -> str:
+    """Retourne un rapport Telegram sur la tendance M15 EMA50 de chaque indice."""
+    lines = ["📊 Tendance M15 EMA50\n"]
+    for key, symbol in symbols.items():
+        df = get_candles(symbol, TF_TREND)
+        if df.empty:
+            lines.append(f"❓ {symbol} — indisponible")
+            continue
+        df    = add_emas(df)
+        last  = df.iloc[-1]
+        price = last["close"]
+        ema50 = last["ema_slow"]
+        expected = direction_map.get(key)
+
+        if price > ema50:
+            trend_label = "UP TREND"
+            emoji = "📈"
+        else:
+            trend_label = "DOWN TREND"
+            emoji = "📉"
+
+        # Pour Crash (buy) : up trend = favorable. Pour Boom (sell) : down trend = favorable
+        if expected == "buy":
+            favorable = price > ema50
+        else:
+            favorable = price < ema50
+
+        status = "trades proches ✅" if favorable else "trades loin ⏳"
+        name   = symbol.replace(" Index", "")
+        lines.append(f"{emoji} {name} — {trend_label} ({status})")
+
+    return "\n".join(lines)
+
+
 def check_trend_m15(symbol: str) -> str | None:
     """Retourne 'buy', 'sell' ou None selon la tendance M15."""
     df = get_candles(symbol, TF_TREND)
@@ -62,10 +96,8 @@ def check_signal_m1(symbol: str, direction: str) -> bool:
 
 
 def is_spike(symbol: str) -> bool:
-    """Retourne True si spike instantane (tick) OU spike progressif (bougie M1 anormale)."""
+    """Retourne True si le dernier tick est un spike (variation > 0.5%)."""
     from datetime import datetime, timezone, timedelta
-
-    # 1. Spike instantane sur tick
     now   = datetime.now(timezone.utc)
     start = now - timedelta(seconds=10)
     ticks = mt5.copy_ticks_range(symbol, start, now, mt5.COPY_TICKS_ALL)
@@ -83,16 +115,4 @@ def is_spike(symbol: str) -> bool:
 
     if p1 == 0:
         return False
-    if abs(p2 - p1) / p1 > SPIKE_THRESHOLD:
-        return True
-
-    # 2. Spike progressif — bougie M1 actuelle > 3x la mediane des 30 dernieres
-    rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_M1, 1, 30)
-    if rates is not None and len(rates) >= 10:
-        ranges  = sorted([r["high"] - r["low"] for r in rates])
-        median  = ranges[len(ranges) // 2]
-        current = ranges[-1]
-        if median > 0 and current > median * 3:
-            return True
-
-    return False
+    return abs(p2 - p1) / p1 > SPIKE_THRESHOLD

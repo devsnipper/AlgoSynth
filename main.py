@@ -1,16 +1,18 @@
 import MetaTrader5 as mt5
 import time
 import os
+import threading
+import requests
 from datetime import datetime, date
 import calendar
 from dotenv import load_dotenv
 
 from config   import SYMBOLS, MAX_TRADES, TP_CONFIG
-from strategy import check_trend_m15, check_signal_m1, is_spike
+from strategy import check_trend_m15, check_signal_m1, is_spike, get_trend_report
 from trader   import has_open_position, open_trade, monitor_trade
 from notifier import (
     notify_start, notify_trade_open, notify_trade_close,
-    notify_spike, notify_max_trades, notify_stop, notify_heartbeat, notify_report
+    notify_spike, notify_max_trades, notify_stop, notify_heartbeat, notify_report, send
 )
 from reporter import (
     daily_report, weekly_report, monthly_report, load_today_trade_count, load_today_pnl
@@ -19,6 +21,41 @@ from reporter import (
 HEARTBEAT_SEC = 30 * 60  # 30 minutes
 
 load_dotenv()
+
+DIRECTION_MAP = {
+    "boom150":   "sell",
+    "crash150":  "buy",
+    "crash500":  "buy",
+    "boom600":   "sell",
+    "boom500":   "sell",
+    "boom900":   "sell",
+}
+
+
+def telegram_listener():
+    """Thread qui ecoute les messages Telegram et repond aux commandes."""
+    token   = os.getenv("TELEGRAM_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    if not token or not chat_id:
+        return
+
+    base    = f"https://api.telegram.org/bot{token}"
+    offset  = 0
+
+    while True:
+        try:
+            r = requests.get(f"{base}/getUpdates", params={"offset": offset, "timeout": 30}, timeout=35)
+            updates = r.json().get("result", [])
+            for upd in updates:
+                offset = upd["update_id"] + 1
+                msg    = upd.get("message", {})
+                text   = msg.get("text", "").strip().lower()
+                if text == "trend":
+                    report = get_trend_report(SYMBOLS, DIRECTION_MAP)
+                    requests.post(f"{base}/sendMessage",
+                                  data={"chat_id": chat_id, "text": report}, timeout=10)
+        except Exception:
+            time.sleep(5)
 
 
 def connect_mt5() -> bool:
@@ -42,6 +79,9 @@ def run():
     if not connect_mt5():
         return
 
+    threading.Thread(target=telegram_listener, daemon=True).start()
+    print("[MAIN] Listener Telegram demarre — commande disponible : trend")
+
     info           = mt5.account_info()
     last_heartbeat = time.time()
 
@@ -56,10 +96,12 @@ def run():
     notify_start(info.balance, info.currency)
     print(f"[MAIN] Connecte | Balance={info.balance} {info.currency}")
 
-    active_symbols = set()   # symboles dont monitor_trade est en cours
-    cooldown       = {}      # symbole -> timestamp fin de cooldown apres perte
+    active_symbols  = set()  # symboles dont monitor_trade est en cours
+    loss_cooldown   = {}     # symbole -> timestamp fin cooldown apres perte
+    pending_signal  = {}     # symbole -> timestamp bougie M5 qui a genere le signal
 
-    COOLDOWN_SEC = 120  # 2 minutes de pause apres un SL
+    LOSS_COOLDOWN_SEC = 120  # 2 min de pause apres un SL
+    spike_cooldown = {}      # symbole -> timestamp fin cooldown apres spike detecte
 
     try:
         while True:
@@ -73,30 +115,28 @@ def run():
                 current_date = today
                 print(f"[MAIN] Nouveau jour : {today}")
 
+            # Objectif journalier atteint
+            if daily_pnl >= 3.0:
+                send(f"🎯 Objectif journalier atteint — PnL : +{daily_pnl:.2f} $\n🛑 Bot en pause jusqu'à minuit")
+                print(f"[MAIN] Objectif +3 USD atteint — arret des trades")
+                while date.today() == current_date:
+                    time.sleep(60)
+                continue
+
             # Limite journaliere atteinte
             if trade_count >= MAX_TRADES:
                 time.sleep(60)
                 continue
 
             for key, symbol in SYMBOLS.items():
-                direction_map = {
-                    "boom150":   "sell",
-                    "crash150":  "buy",
-                    "crash500":  "buy",
-                    "boom600":   "sell",
-                    "boom500":   "sell",
-                    "boom900":   "sell",
-                }
-                expected_dir  = direction_map[key]
+                expected_dir = DIRECTION_MAP[key]
 
                 # 1. Symbole deja surveille par monitor_trade
                 if symbol in active_symbols:
                     continue
 
-                # 2. Cooldown post-perte actif
-                if time.time() < cooldown.get(symbol, 0):
-                    remaining = int(cooldown[symbol] - time.time())
-                    print(f"[MAIN] Cooldown {symbol} — {remaining}s restantes")
+                # 2. Cooldown apres une perte
+                if time.time() < loss_cooldown.get(symbol, 0):
                     continue
 
                 # 3. Pas de trade actif sur ce symbole
@@ -108,18 +148,38 @@ def run():
                 if trend != expected_dir:
                     continue
 
-                # 5. Signal M1
+                # 5. Signal M5 sur bougie fermee
                 if not check_signal_m1(symbol, expected_dir):
+                    pending_signal.pop(symbol, None)
                     continue
 
-                # 6. Spike filter (tick + bougie progressive)
+                # 6. Guardrail : entrer uniquement sur la bougie SUIVANT le signal
+                last_closed = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_M5, 1, 1)
+                current     = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_M5, 0, 1)
+                if last_closed is None or current is None:
+                    continue
+                signal_candle_time  = int(last_closed[0]["time"])
+                current_candle_time = int(current[0]["time"])
+
+                if symbol not in pending_signal:
+                    # Signal detecte — on enregistre et on attend la prochaine bougie
+                    pending_signal[symbol] = signal_candle_time
+                    print(f"[MAIN] Signal en attente sur {symbol} — prochaine bougie M5")
+                    continue
+
+                if current_candle_time <= pending_signal[symbol]:
+                    # Nouvelle bougie pas encore ouverte
+                    continue
+
+                # Nouvelle bougie ouverte — signal confirme, on peut entrer
+                pending_signal.pop(symbol, None)
+
+                # 7. Spike filter
                 if is_spike(symbol):
                     print(f"[MAIN] Spike detecte sur {symbol}")
-                    notify_spike(symbol)
-                    cooldown[symbol] = time.time() + COOLDOWN_SEC
                     continue
 
-                # 7. Ouvrir le trade — SL serveur strict, TP bot-side uniquement
+                # 8. Ouvrir le trade — SL serveur strict, TP bot-side uniquement
                 tick        = mt5.symbol_info_tick(symbol)
                 entry_price = tick.ask if expected_dir == "buy" else tick.bid
                 cfg         = TP_CONFIG.get(symbol, {})
@@ -141,10 +201,9 @@ def run():
                 if profit is not None:
                     daily_pnl += profit
                     notify_trade_close(symbol, profit, daily_pnl)
-                    # Cooldown apres une perte
                     if profit < 0:
-                        cooldown[symbol] = time.time() + COOLDOWN_SEC
-                        print(f"[MAIN] Cooldown 120s sur {symbol} apres perte {profit:.2f}")
+                        loss_cooldown[symbol] = time.time() + LOSS_COOLDOWN_SEC
+                        print(f"[MAIN] Pause 120s sur {symbol} apres perte")
 
             # Heartbeat toutes les 30 minutes
             if time.time() - last_heartbeat >= HEARTBEAT_SEC:
