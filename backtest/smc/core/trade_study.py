@@ -18,6 +18,7 @@ import pandas as pd
 from core import study
 from core.context import get_context
 from core.data import load, symbol_info
+from core.constants import M5_TD, M15_TD
 from core.engine import simulate_orders
 
 ATR_STOP = 2.0
@@ -41,9 +42,15 @@ def make_orders(ctx, m5, t_idx, directions) -> pd.DataFrame:
     return pd.DataFrame({"signal_time": pd.to_datetime(t_close), "direction": d, "entry": entry, "stop": stop})
 
 
-def run_orders(symbol: str, orders: pd.DataFrame) -> pd.DataFrame:
+def frame_for(symbol: str, block: str):
+    """Candles used for fills: M5 for block A; M15 (coarser, more pessimistic) for the older block C."""
+    return (load(symbol, "M5"), M5_TD) if block == "A" else (load(symbol, "M15"), M15_TD)
+
+
+def run_orders(symbol: str, orders: pd.DataFrame, block: str = "A") -> pd.DataFrame:
     info = symbol_info()[symbol]
-    res = simulate_orders(orders, load(symbol, "M5"), info["point"], info["stops_level"], rr=RR, max_hold_hours=HOLD_H)
+    frame, td = frame_for(symbol, block)
+    res = simulate_orders(orders, frame, info["point"], info["stops_level"], rr=RR, max_hold_hours=HOLD_H, candle_td=td)
     res = res[res.status == "closed"].copy()
     res.insert(0, "symbol", symbol)
     return res
@@ -54,8 +61,8 @@ def setup_trades(setup, symbol: str, bias: str, block: str = "A") -> pd.DataFram
     ev = study.select_events(ctx, setup.detect(ctx), block, bias)
     if ev.empty:
         return pd.DataFrame()
-    orders = make_orders(ctx, load(symbol, "M5"), ev["t"].to_numpy(), ev["direction"].to_numpy())
-    return run_orders(symbol, orders)
+    orders = make_orders(ctx, frame_for(symbol, block)[0], ev["t"].to_numpy(), ev["direction"].to_numpy())
+    return run_orders(symbol, orders, block)
 
 
 def control_trades(symbol: str, bias: str, block: str = "A", seed: int = 5) -> pd.DataFrame:
@@ -67,7 +74,7 @@ def control_trades(symbol: str, bias: str, block: str = "A", seed: int = 5) -> p
         valid = valid[ctx.h1_dir[valid] != 0]
     t = np.sort(rng.choice(valid, size=min(CONTROL_ORDERS, len(valid)), replace=False))
     d = ctx.h1_dir[t].astype(int) if bias == "h1" else rng.choice([-1, 1], size=len(t))
-    return run_orders(symbol, make_orders(ctx, load(symbol, "M5"), t, d))
+    return run_orders(symbol, make_orders(ctx, frame_for(symbol, block)[0], t, d), block)
 
 
 def summarize(tr: pd.DataFrame) -> dict:
@@ -79,22 +86,24 @@ def summarize(tr: pd.DataFrame) -> dict:
             "avg_R_at_stop_level": tr["r_level"].mean(), "worst_R": r.min(), "avg_loss_R": r[r < 0].mean() if (r < 0).any() else np.nan}
 
 
-def study_trades(setup, symbols: list, controls: dict) -> pd.DataFrame:
-    """One row per (bias, group) for one setup. `controls` = {(bias, symbol): DataFrame of control trades}."""
+def study_trades(setup, symbols: list, controls: dict, blocks=("A", "C")) -> pd.DataFrame:
+    """One row per (block, bias, group) for one setup; blocks also include the pooled "A+C".
+    `controls` = {(bias, symbol, block): DataFrame of control trades}."""
     biases = ("h1",) if not setup.uses_bias else study.BIASES
     rows = []
     for bias in biases:
-        per_symbol = {s: setup_trades(setup, s, bias) for s in symbols}
+        trades = {(s, b): setup_trades(setup, s, bias, b) for s in symbols for b in blocks}
         for gname, prefix in GROUPS.items():
             syms = [s for s in symbols if prefix is None or s.startswith(prefix)]
-            tr = pd.concat([per_symbol[s] for s in syms if not per_symbol[s].empty], ignore_index=True) \
-                if any(not per_symbol[s].empty for s in syms) else pd.DataFrame()
-            ctrl = pd.concat([controls[(bias, s)] for s in syms], ignore_index=True)
-            row = {"setup": setup.name, "bias": bias, "group": gname, **summarize(tr),
-                   "control_avg_R": ctrl["r"].mean(), "control_win_pct": 100 * (ctrl["reason"] == "TP").mean(),
-                   "control_PF": summarize(ctrl)["profit_factor"]}
-            if len(tr) > 1:
-                se = tr["r"].std(ddof=1) / np.sqrt(len(tr))
-                row["z_vs_control"] = (tr["r"].mean() - ctrl["r"].mean()) / se if se > 0 else np.nan
-            rows.append(row)
+            for label, bl in [(b, (b,)) for b in blocks] + [("+".join(blocks), tuple(blocks))]:
+                parts = [trades[(s, b)] for s in syms for b in bl if not trades[(s, b)].empty]
+                tr = pd.concat(parts, ignore_index=True) if parts else pd.DataFrame()
+                ctrl = pd.concat([controls[(bias, s, b)] for s in syms for b in bl], ignore_index=True)
+                row = {"setup": setup.name, "bias": bias, "group": gname, "block": label, **summarize(tr),
+                       "control_avg_R": ctrl["r"].mean(), "control_win_pct": 100 * (ctrl["reason"] == "TP").mean(),
+                       "control_PF": summarize(ctrl)["profit_factor"]}
+                if len(tr) > 1:
+                    se = tr["r"].std(ddof=1) / np.sqrt(len(tr))
+                    row["z_vs_control"] = (tr["r"].mean() - ctrl["r"].mean()) / se if se > 0 else np.nan
+                rows.append(row)
     return pd.DataFrame(rows)

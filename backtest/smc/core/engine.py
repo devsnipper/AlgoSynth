@@ -10,8 +10,10 @@ from core.constants import M5_TD, M15_TD
 
 
 def simulate_orders(orders: pd.DataFrame, m5: pd.DataFrame, point: float, stops_level: float,
-                    rr: float = 2.0, expire_candles: int = 8, max_hold_hours: float = 3.0) -> pd.DataFrame:
+                    rr: float = 2.0, expire_candles: int = 8, max_hold_hours: float = 3.0,
+                    candle_td: pd.Timedelta = M5_TD) -> pd.DataFrame:
     """orders: signal_time (order is live from this time), direction (+1 buy / -1 sell), entry, stop.
+    `m5` can be any candle frame; pass candle_td = its candle length (M15 frame -> 15 minutes).
     Returns one row per order with status: closed, nofill, tooclose, busy, nodata."""
     t5 = m5["time"].to_numpy()
     o, h, l, c = (m5[x].to_numpy() for x in ("open", "high", "low", "close"))
@@ -73,7 +75,7 @@ def simulate_orders(orders: pd.DataFrame, m5: pd.DataFrame, point: float, stops_
         if reason == "TIME" and i_hold > n:
             reason = "END"
 
-        busy_until = pd.Timestamp(t5[j]) + M5_TD
+        busy_until = pd.Timestamp(t5[j]) + candle_td
         rows.append({**base, "status": "closed", "fill_time": pd.Timestamp(t5[fill_i]), "fill": fill,
                      "R_price": R, "tp": tp, "exit_time": busy_until, "reason": reason,
                      "exit_extreme": ex_extreme, "exit_level": ex_level,

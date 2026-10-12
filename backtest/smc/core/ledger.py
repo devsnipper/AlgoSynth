@@ -39,7 +39,7 @@ def record_exploratory(command: str, design: str, cells: int):
     """Log a run that is NOT a Stage 1/2 test (it never counts towards selection)."""
     led = _load()
     led.setdefault("exploratory", []).append({"time": datetime.now().isoformat(timespec="seconds"),
-                                              "command": command, "design": design, "cells": cells, "blocks": ["A"]})
+                                              "command": command, "design": design, "cells": cells, "blocks": ["A", "C"]})
     with open(PATH, "w", encoding="utf-8") as f:
         json.dump(led, f, indent=2)
 

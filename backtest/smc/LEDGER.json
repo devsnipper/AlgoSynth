@@ -154,6 +154,16 @@
       "blocks": [
         "A"
       ]
+    },
+    {
+      "time": "2026-10-12T17:09:20",
+      "command": "trades",
+      "design": "market entry, stop 2.0 ATR, target 2.0R, hold 3.0 h",
+      "cells": 171,
+      "blocks": [
+        "A",
+        "C"
+      ]
     }
   ]
 }

@@ -4,7 +4,7 @@
     backtest/.venv/Scripts/python.exe backtest/smc/run.py study s02_range_sweep     (or just: study s02)
     backtest/.venv/Scripts/python.exe backtest/smc/run.py study all
     backtest/.venv/Scripts/python.exe backtest/smc/run.py counts                    (events per setup, no statistics)
-    backtest/.venv/Scripts/python.exe backtest/smc/run.py trades                    (exploratory: win rate / R for every setup)
+    backtest/.venv/Scripts/python.exe backtest/smc/run.py trades                    (exploratory: win rate / R for every setup, blocks A and C)
     backtest/.venv/Scripts/python.exe backtest/smc/run.py test
 
 `study` is Stage 1 (blocks A and C only). Block B is never opened here.
@@ -79,7 +79,7 @@ def cmd_study(args) -> int:
 
 
 def cmd_trades(_args) -> int:
-    """EXPLORATORY: one fixed trade design for every setup on block A, against random entries (core/trade_study.py)."""
+    """EXPLORATORY: one fixed trade design for every setup on blocks A (M5 fills) and C (M15 fills), against random entries."""
     import pandas as pd
     from core import ledger, study, trade_study
     from core.constants import SMC_DIR
@@ -88,15 +88,16 @@ def cmd_trades(_args) -> int:
 
     syms = symbols()
     t0 = time.time()
-    controls = {(b, s): trade_study.control_trades(s, b) for b in study.BIASES for s in syms}
+    controls = {(b, s, blk): trade_study.control_trades(s, b, blk) for b in study.BIASES for s in syms for blk in ("A", "C")}
     print(f"controls done ({time.time() - t0:.0f}s)")
     out = []
     for s in registry.load_all().values():
         t1 = time.time()
         df = trade_study.study_trades(s, syms, controls)
         out.append(df)
-        best = df.sort_values("avg_R", ascending=False).head(1).iloc[0]
-        print(f"{s.name:<42} {time.time() - t1:5.1f}s  best avg_R {best.avg_R:+.3f} ({best.bias}/{best.group}, n={int(best.trades)})")
+        best = df[(df.block == "A+C") & (df.trades >= 300)].sort_values("avg_R", ascending=False).head(1)
+        top = "no A+C cell with 300 trades" if best.empty else f"best A+C avg_R {best.iloc[0].avg_R:+.3f} ({best.iloc[0].bias}/{best.iloc[0].group}, n={int(best.iloc[0].trades)})"
+        print(f"{s.name:<42} {time.time() - t1:5.1f}s  {top}")
     res = pd.concat(out, ignore_index=True)
     folder = os.path.join(SMC_DIR, "reports")
     os.makedirs(folder, exist_ok=True)
