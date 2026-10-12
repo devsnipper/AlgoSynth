@@ -163,3 +163,18 @@ def find_setups(m15: pd.DataFrame, point: float, ctx: dict | None = None, L: int
     cols = ["signal_idx", "signal_time", "direction", "sweep_idx", "ob_idx", "entry", "stop",
             "fvg_mid", "htf_dir", "htf_pos", "htf_ok", "expire_idx"]
     return pd.DataFrame(rows, columns=cols)
+
+
+def atr(high: np.ndarray, low: np.ndarray, close: np.ndarray, n: int = 14) -> np.ndarray:
+    """Wilder ATR. Causal: value at t uses candles <= t. NaN for the first n-1 candles."""
+    prev_close = np.concatenate([[np.nan], close[:-1]])
+    tr = np.nanmax(np.vstack([high - low, np.abs(high - prev_close), np.abs(low - prev_close)]), axis=0)
+    out = pd.Series(tr).ewm(alpha=1.0 / n, adjust=False, min_periods=n).mean().to_numpy()
+    return out
+
+
+def spike_flags(high: np.ndarray, low: np.ndarray, mult: float = 8.0, window: int = 200) -> np.ndarray:
+    """True for candles whose range is above mult x the median range of the previous `window` candles."""
+    rng = pd.Series(high - low)
+    med = rng.shift(1).rolling(window, min_periods=20).median()
+    return (rng > mult * med).fillna(False).to_numpy()

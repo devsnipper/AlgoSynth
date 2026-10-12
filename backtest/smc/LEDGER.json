@@ -1,0 +1,28 @@
+{
+  "hypotheses": {
+    "s02_range_sweep|none|all|A": "2026-10-12T16:34:54",
+    "s02_range_sweep|none|Boom|A": "2026-10-12T16:34:54",
+    "s02_range_sweep|none|Crash|A": "2026-10-12T16:34:54",
+    "s02_range_sweep|none|all|C": "2026-10-12T16:34:54",
+    "s02_range_sweep|none|Boom|C": "2026-10-12T16:34:54",
+    "s02_range_sweep|none|Crash|C": "2026-10-12T16:34:54",
+    "s02_range_sweep|h1|all|A": "2026-10-12T16:34:54",
+    "s02_range_sweep|h1|Boom|A": "2026-10-12T16:34:54",
+    "s02_range_sweep|h1|Crash|A": "2026-10-12T16:34:54",
+    "s02_range_sweep|h1|all|C": "2026-10-12T16:34:54",
+    "s02_range_sweep|h1|Boom|C": "2026-10-12T16:34:54",
+    "s02_range_sweep|h1|Crash|C": "2026-10-12T16:34:54"
+  },
+  "runs": [
+    {
+      "time": "2026-10-12T16:34:54",
+      "command": "study s02",
+      "stage": 1,
+      "setups": [
+        "s02_range_sweep"
+      ],
+      "cells": 12
+    }
+  ],
+  "block_B": []
+}
