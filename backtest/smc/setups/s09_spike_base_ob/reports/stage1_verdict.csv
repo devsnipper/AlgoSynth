@@ -1,0 +1,7 @@
+setup,bias,group,n_A,excess_A,z_A,n_C,excess_C,z_C,enough_events,pass_A,same_sign_C,verdict
+s09_spike_base_ob,none,all,2,-4.537374127921434,-4.761638543297958,13,1.0523370734731166,1.167562942137937,False,False,True,too few events
+s09_spike_base_ob,none,Boom,1,-3.5844722882158933,,8,0.5994169652117609,0.49160588236783176,False,False,True,too few events
+s09_spike_base_ob,none,Crash,1,-5.490275967626975,,5,1.7770092466912861,1.2691922082871216,False,False,True,too few events
+s09_spike_base_ob,h1,all,1,-3.431608224779966,,8,1.9389539951939576,1.4806135442112458,False,False,True,too few events
+s09_spike_base_ob,h1,Boom,1,-3.431608224779966,,6,1.16497357435167,0.7368157830002481,False,False,True,too few events
+s09_spike_base_ob,h1,Crash,0,,,2,4.26089525772082,2.3341561804569615,False,False,True,too few events
