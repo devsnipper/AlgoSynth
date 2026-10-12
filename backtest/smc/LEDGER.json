@@ -144,5 +144,16 @@
       "cells": 114
     }
   ],
-  "block_B": []
+  "block_B": [],
+  "exploratory": [
+    {
+      "time": "2026-10-12T16:55:17",
+      "command": "trades",
+      "design": "market entry, stop 2.0 ATR, target 2.0R, hold 3.0 h",
+      "cells": 57,
+      "blocks": [
+        "A"
+      ]
+    }
+  ]
 }

@@ -76,15 +76,21 @@ def cluster(t: np.ndarray) -> np.ndarray:
     return keep
 
 
-def symbol_excess(ctx, events: pd.DataFrame, block: str, bias: str) -> dict:
-    """Excess results of one symbol's events for one block and bias condition."""
+def select_events(ctx, events: pd.DataFrame, block: str, bias: str) -> pd.DataFrame:
+    """Events of one symbol inside a block, with the bias condition applied, clustered (first of each group)."""
     mask = block_mask(ctx, block)
     ev = events[(events["t"] >= 0) & (events["t"] < ctx.n)]
     ev = ev[mask[ev["t"].to_numpy()]]
     if bias == "h1":
         ev = ev[ctx.h1_dir[ev["t"].to_numpy()] == ev["direction"].to_numpy()]
     ev = ev.sort_values("t")
-    ev = ev[cluster(ev["t"].to_numpy())]
+    return ev[cluster(ev["t"].to_numpy())]
+
+
+def symbol_excess(ctx, events: pd.DataFrame, block: str, bias: str) -> dict:
+    """Excess results of one symbol's events for one block and bias condition."""
+    mask = block_mask(ctx, block)
+    ev = select_events(ctx, events, block, bias)
     out = {"n": len(ev), "direction": ev["direction"].to_numpy(), "t": ev["t"].to_numpy()}
     for name, hb in HORIZONS.items():
         fw = forward(ctx, hb)

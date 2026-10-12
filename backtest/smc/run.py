@@ -4,6 +4,7 @@
     backtest/.venv/Scripts/python.exe backtest/smc/run.py study s02_range_sweep     (or just: study s02)
     backtest/.venv/Scripts/python.exe backtest/smc/run.py study all
     backtest/.venv/Scripts/python.exe backtest/smc/run.py counts                    (events per setup, no statistics)
+    backtest/.venv/Scripts/python.exe backtest/smc/run.py trades                    (exploratory: win rate / R for every setup)
     backtest/.venv/Scripts/python.exe backtest/smc/run.py test
 
 `study` is Stage 1 (blocks A and C only). Block B is never opened here.
@@ -77,6 +78,34 @@ def cmd_study(args) -> int:
     return 0
 
 
+def cmd_trades(_args) -> int:
+    """EXPLORATORY: one fixed trade design for every setup on block A, against random entries (core/trade_study.py)."""
+    import pandas as pd
+    from core import ledger, study, trade_study
+    from core.constants import SMC_DIR
+    from core.data import symbols
+    from setups import registry
+
+    syms = symbols()
+    t0 = time.time()
+    controls = {(b, s): trade_study.control_trades(s, b) for b in study.BIASES for s in syms}
+    print(f"controls done ({time.time() - t0:.0f}s)")
+    out = []
+    for s in registry.load_all().values():
+        t1 = time.time()
+        df = trade_study.study_trades(s, syms, controls)
+        out.append(df)
+        best = df.sort_values("avg_R", ascending=False).head(1).iloc[0]
+        print(f"{s.name:<42} {time.time() - t1:5.1f}s  best avg_R {best.avg_R:+.3f} ({best.bias}/{best.group}, n={int(best.trades)})")
+    res = pd.concat(out, ignore_index=True)
+    folder = os.path.join(SMC_DIR, "reports")
+    os.makedirs(folder, exist_ok=True)
+    res.to_csv(os.path.join(folder, "exploratory_trades.csv"), index=False)
+    ledger.record_exploratory("trades", f"market entry, stop {trade_study.ATR_STOP} ATR, target {trade_study.RR}R, hold {trade_study.HOLD_H} h", len(res))
+    print(f"Written to {folder}")
+    return 0
+
+
 def cmd_test(_args) -> int:
     code = 0
     env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
@@ -93,7 +122,7 @@ def cmd_test(_args) -> int:
     return code
 
 
-COMMANDS = {"list": cmd_list, "counts": cmd_counts, "study": cmd_study, "test": cmd_test}
+COMMANDS = {"list": cmd_list, "counts": cmd_counts, "study": cmd_study, "trades": cmd_trades, "test": cmd_test}
 
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
