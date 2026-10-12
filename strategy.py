@@ -57,14 +57,8 @@ def get_trend_report(symbols: dict, direction_map: dict) -> str:
     return "\n".join(lines)
 
 
-def check_trend_m15(symbol: str) -> str | None:
-    """Retourne 'buy', 'sell' ou None selon la tendance M15."""
-    df = get_candles(symbol, TF_TREND)
-    if df.empty:
-        return None
-    df = add_emas(df)
-    last = df.iloc[-1]
-
+def trend_from_row(last) -> str | None:
+    """Tendance a partir d'une ligne de candle avec EMAs deja calculees."""
     if last["ema_fast"] > last["ema_mid"] > last["ema_slow"]:
         return "buy"
     if last["ema_fast"] < last["ema_mid"] < last["ema_slow"]:
@@ -72,16 +66,8 @@ def check_trend_m15(symbol: str) -> str | None:
     return None
 
 
-def check_signal_m1(symbol: str, direction: str) -> bool:
-    """Croisement EMA5/13 au-dessus/dessous EMA50 en M1."""
-    df = get_candles(symbol, TF_SIGNAL)
-    if len(df) < 2:
-        return False
-    df = add_emas(df)
-
-    prev = df.iloc[-2]
-    last = df.iloc[-1]
-
+def signal_from_rows(prev, last, direction: str) -> bool:
+    """Croisement EMA5/13 au-dessus/dessous EMA50 entre deux candles consecutives."""
     if direction == "buy":
         crossed_up = prev["ema_fast"] <= prev["ema_mid"] and last["ema_fast"] > last["ema_mid"]
         above_slow = last["ema_fast"] > last["ema_slow"] and last["ema_mid"] > last["ema_slow"]
@@ -93,6 +79,24 @@ def check_signal_m1(symbol: str, direction: str) -> bool:
         return crossed_down and below_slow
 
     return False
+
+
+def check_trend_m15(symbol: str) -> str | None:
+    """Retourne 'buy', 'sell' ou None selon la tendance M15."""
+    df = get_candles(symbol, TF_TREND)
+    if df.empty:
+        return None
+    df = add_emas(df)
+    return trend_from_row(df.iloc[-1])
+
+
+def check_signal_m1(symbol: str, direction: str) -> bool:
+    """Croisement EMA5/13 au-dessus/dessous EMA50 sur le timeframe signal (M5)."""
+    df = get_candles(symbol, TF_SIGNAL)
+    if len(df) < 2:
+        return False
+    df = add_emas(df)
+    return signal_from_rows(df.iloc[-2], df.iloc[-1], direction)
 
 
 def is_spike(symbol: str) -> bool:

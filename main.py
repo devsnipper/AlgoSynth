@@ -59,17 +59,12 @@ def telegram_listener():
 
 
 def connect_mt5() -> bool:
-    if not mt5.initialize():
-        print(f"[MAIN] initialize() echoue : {mt5.last_error()}")
-        return False
-
     login    = int(os.getenv("MT5_LOGIN"))
     password = os.getenv("MT5_PASSWORD")
     server   = os.getenv("MT5_SERVER")
 
-    if not mt5.login(login, password=password, server=server):
-        print(f"[MAIN] login() echoue : {mt5.last_error()}")
-        mt5.shutdown()
+    if not mt5.initialize(login=login, password=password, server=server):
+        print(f"[MAIN] initialize() echoue : {mt5.last_error()}")
         return False
 
     return True

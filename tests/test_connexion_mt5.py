@@ -21,7 +21,7 @@ if not LOGIN or not PASSWORD or not SERVER:
     exit(1)
 
 # Initialisation
-if not mt5.initialize():
+if not mt5.initialize(login=int(LOGIN), password=PASSWORD, server=SERVER):
     print(f"ERREUR initialize() : {mt5.last_error()}")
     exit(1)
 print("MT5 initialise avec succes")
