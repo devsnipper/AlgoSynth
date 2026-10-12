@@ -19,5 +19,12 @@ def symbol_info() -> dict:
         return json.load(f)
 
 
-def symbols() -> list:
-    return list(symbol_info())
+def group_of(symbol: str, info: dict) -> str:
+    """'boomcrash' or 'spikefree'. Older entries have no group tag, so they are inferred from the name."""
+    return info.get("group") or ("boomcrash" if symbol.startswith(("Boom", "Crash")) else "spikefree")
+
+
+def symbols(group: str = "boomcrash") -> list:
+    """Symbols of one universe. The default keeps every earlier result reproducible. Use group='all' for everything."""
+    info = symbol_info()
+    return [s for s, v in info.items() if group == "all" or group_of(s, v) == group]

@@ -78,5 +78,131 @@
     "volume_min": 0.2,
     "volume_step": 0.01,
     "stops_level": 7620
+  },
+  "Step Index": {
+    "point": 0.1,
+    "digits": 1,
+    "contract_size": 10.0,
+    "volume_min": 0.1,
+    "volume_step": 0.01,
+    "stops_level": 8,
+    "group": "spikefree"
+  },
+  "Step Index 200": {
+    "point": 0.1,
+    "digits": 1,
+    "contract_size": 10.0,
+    "volume_min": 0.1,
+    "volume_step": 0.01,
+    "stops_level": 11,
+    "group": "spikefree"
+  },
+  "Step Index 300": {
+    "point": 0.1,
+    "digits": 1,
+    "contract_size": 10.0,
+    "volume_min": 0.1,
+    "volume_step": 0.01,
+    "stops_level": 9,
+    "group": "spikefree"
+  },
+  "Step Index 400": {
+    "point": 0.1,
+    "digits": 1,
+    "contract_size": 10.0,
+    "volume_min": 0.1,
+    "volume_step": 0.01,
+    "stops_level": 12,
+    "group": "spikefree"
+  },
+  "Step Index 500": {
+    "point": 0.1,
+    "digits": 1,
+    "contract_size": 10.0,
+    "volume_min": 0.1,
+    "volume_step": 0.01,
+    "stops_level": 20,
+    "group": "spikefree"
+  },
+  "Range Break 100 Index": {
+    "point": 0.1,
+    "digits": 1,
+    "contract_size": 1.0,
+    "volume_min": 0.01,
+    "volume_step": 0.01,
+    "stops_level": 66,
+    "group": "spikefree"
+  },
+  "Range Break 200 Index": {
+    "point": 0.1,
+    "digits": 1,
+    "contract_size": 1.0,
+    "volume_min": 0.01,
+    "volume_step": 0.01,
+    "stops_level": 66,
+    "group": "spikefree"
+  },
+  "Multi Step 2 Index": {
+    "point": 0.01,
+    "digits": 2,
+    "contract_size": 10.0,
+    "volume_min": 0.1,
+    "volume_step": 0.01,
+    "stops_level": 96,
+    "group": "spikefree"
+  },
+  "Multi Step 3 Index": {
+    "point": 0.01,
+    "digits": 2,
+    "contract_size": 10.0,
+    "volume_min": 0.1,
+    "volume_step": 0.01,
+    "stops_level": 60,
+    "group": "spikefree"
+  },
+  "Multi Step 4 Index": {
+    "point": 0.01,
+    "digits": 2,
+    "contract_size": 10.0,
+    "volume_min": 0.1,
+    "volume_step": 0.01,
+    "stops_level": 109,
+    "group": "spikefree"
+  },
+  "Volatility 10 Index": {
+    "point": 0.001,
+    "digits": 3,
+    "contract_size": 1.0,
+    "volume_min": 0.5,
+    "volume_step": 0.01,
+    "stops_level": 720,
+    "group": "spikefree"
+  },
+  "Volatility 25 Index": {
+    "point": 0.001,
+    "digits": 3,
+    "contract_size": 1.0,
+    "volume_min": 0.5,
+    "volume_step": 0.01,
+    "stops_level": 423,
+    "group": "spikefree"
+  },
+  "Volatility 75 Index": {
+    "point": 0.01,
+    "digits": 2,
+    "contract_size": 1.0,
+    "volume_min": 0.01,
+    "volume_step": 0.001,
+    "stops_level": 10770,
+    "group": "spikefree"
+  },
+  "Volatility 100 Index": {
+    "point": 0.01,
+    "digits": 2,
+    "contract_size": 1.0,
+    "volume_min": 1.0,
+    "volume_step": 0.01,
+    "stops_level": 138,
+    "group": "spikefree"
   }
 }
