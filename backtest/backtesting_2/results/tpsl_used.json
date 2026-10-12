@@ -1,0 +1,58 @@
+{
+  "Step Index": {
+    "tp": 11,
+    "sl": 11
+  },
+  "Step Index 200": {
+    "tp": 16,
+    "sl": 16
+  },
+  "Step Index 300": {
+    "tp": 14,
+    "sl": 14
+  },
+  "Step Index 400": {
+    "tp": 19,
+    "sl": 19
+  },
+  "Step Index 500": {
+    "tp": 30,
+    "sl": 30
+  },
+  "Range Break 100 Index": {
+    "tp": 91,
+    "sl": 91
+  },
+  "Range Break 200 Index": {
+    "tp": 91,
+    "sl": 91
+  },
+  "Multi Step 2 Index": {
+    "tp": 145,
+    "sl": 145
+  },
+  "Multi Step 3 Index": {
+    "tp": 96,
+    "sl": 96
+  },
+  "Multi Step 4 Index": {
+    "tp": 155,
+    "sl": 155
+  },
+  "Volatility 10 Index": {
+    "tp": 1090,
+    "sl": 1090
+  },
+  "Volatility 25 Index": {
+    "tp": 869,
+    "sl": 869
+  },
+  "Volatility 75 Index": {
+    "tp": 14921,
+    "sl": 14921
+  },
+  "Volatility 100 Index": {
+    "tp": 197,
+    "sl": 197
+  }
+}
