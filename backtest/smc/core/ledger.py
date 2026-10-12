@@ -21,14 +21,14 @@ def _load() -> dict:
     return {"hypotheses": {}, "runs": [], "block_B": [], "exploratory": []}
 
 
-def record_study(command: str, cells) -> dict:
+def record_study(command: str, cells, universe: str = "boomcrash") -> dict:
     """Log a Stage 1 run. `cells` is the DataFrame returned by study_setup (all setups concatenated)."""
     led = _load()
     now = datetime.now().isoformat(timespec="seconds")
     for r in cells[["setup", "bias", "block", "group"]].drop_duplicates().itertuples(index=False):
-        key = f"{r.setup}|{r.bias}|{r.group}|{r.block}"
+        key = f"{r.setup}|{r.bias}|{r.group}|{r.block}" if universe == "boomcrash" else f"{universe}:{r.setup}|{r.bias}|{r.group}|{r.block}"
         led["hypotheses"].setdefault(key, now)
-    led["runs"].append({"time": now, "command": command, "stage": 1,
+    led["runs"].append({"time": now, "command": command, "stage": 1, "universe": universe,
                         "setups": sorted(cells["setup"].unique().tolist()), "cells": int(len(cells))})
     with open(PATH, "w", encoding="utf-8") as f:
         json.dump(led, f, indent=2)
@@ -47,5 +47,8 @@ def record_exploratory(command: str, design: str, cells: int):
 def summary(led: dict = None) -> dict:
     led = led or _load()
     keys = list(led["hypotheses"])
-    return {"tests_block_A": sum(k.endswith("|A") for k in keys), "tests_block_C": sum(k.endswith("|C") for k in keys),
+    sf = [k for k in keys if k.startswith("spikefree:")]
+    bc = [k for k in keys if not k.startswith("spikefree:")]
+    return {"tests_block_A": sum(k.endswith("|A") for k in bc), "tests_block_C": sum(k.endswith("|C") for k in bc),
+            "spikefree_tests_block_A": sum(k.endswith("|A") for k in sf), "spikefree_tests_block_C": sum(k.endswith("|C") for k in sf),
             "runs": len(led["runs"]), "block_B_opened_for": led["block_B"]}

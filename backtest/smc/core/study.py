@@ -22,7 +22,25 @@ CLUSTER = 12
 Z_THRESHOLD = 3.2
 MIN_EVENTS = 300
 WARMUP = 250                      # candles ignored at the start of every symbol (ATR and swings settle)
-GROUPS = {"all": None, "Boom": "Boom", "Crash": "Crash"}
+GROUPS = {"all": None, "Boom": "Boom", "Crash": "Crash"}          # kept for the Boom/Crash universe
+UNIVERSES = {
+    "boomcrash": {"z": 3.2, "groups": {"all": None, "Boom": ("Boom",), "Crash": ("Crash",)}},
+    # z raised from 3.2 to 3.4: 152 cells tested in the whole program (docs/SETUP_LIST.md, addendum)
+    "spikefree": {"z": 3.4, "groups": {"all": None, "Step": ("Step",), "Range Break": ("Range Break",),
+                                       "Multi Step": ("Multi Step",), "Volatility": ("Volatility",)}},
+}
+
+
+def group_defs(universe: str = "boomcrash") -> dict:
+    return UNIVERSES[universe]["groups"]
+
+
+def z_threshold(universe: str = "boomcrash") -> float:
+    return UNIVERSES[universe]["z"]
+
+
+def in_group(symbol: str, prefixes) -> bool:
+    return prefixes is None or symbol.startswith(tuple(prefixes))
 BIASES = ("none", "h1")
 BLOCKS = ("A", "C")
 
@@ -135,7 +153,7 @@ def cell_stats(parts: list) -> dict:
     return row
 
 
-def study_setup(setup, symbols: list, blocks=BLOCKS, biases=BIASES) -> pd.DataFrame:
+def study_setup(setup, symbols: list, blocks=BLOCKS, biases=BIASES, universe: str = "boomcrash") -> pd.DataFrame:
     """All cells of one setup: bias x block x symbol group. Returns one row per cell."""
     if not setup.uses_bias:
         biases = ("h1",)                                  # the bias is part of the definition
@@ -144,29 +162,30 @@ def study_setup(setup, symbols: list, blocks=BLOCKS, biases=BIASES) -> pd.DataFr
     for bias in biases:
         for block in blocks:
             per_symbol = {s: symbol_excess(get_context(s), events[s], block, bias) for s in symbols}
-            for gname, prefix in GROUPS.items():
-                parts = [p for s, p in per_symbol.items() if prefix is None or s.startswith(prefix)]
+            for gname, prefix in group_defs(universe).items():
+                parts = [p for s, p in per_symbol.items() if in_group(s, prefix)]
                 row = {"setup": setup.name, "bias": bias, "block": block, "group": gname,
                        "symbols": len(parts), **cell_stats(parts)}
                 rows.append(row)
     return pd.DataFrame(rows)
 
 
-def verdicts(cells: pd.DataFrame) -> pd.DataFrame:
+def verdicts(cells: pd.DataFrame, z_min: float = None) -> pd.DataFrame:
     """One row per (setup, bias, group): the Stage 1 verdict from blocks A and C."""
+    z_min = Z_THRESHOLD if z_min is None else z_min
     out = []
     for (setup, bias, group), g in cells.groupby(["setup", "bias", "group"], sort=False):
         a = g[g.block == "A"].iloc[0]
         c = g[g.block == "C"].iloc[0] if (g.block == "C").any() else None
         enough = a["n"] >= MIN_EVENTS
-        z_ok = bool(enough and a[f"z_{PRIMARY}"] >= Z_THRESHOLD)
+        z_ok = bool(enough and a[f"z_{PRIMARY}"] >= z_min)
         c_ok = bool(c is not None and c[f"excess_{PRIMARY}"] > 0)
-        reverse = bool(enough and a[f"z_{PRIMARY}"] <= -Z_THRESHOLD)
+        reverse = bool(enough and a[f"z_{PRIMARY}"] <= -z_min)
         out.append({"setup": setup, "bias": bias, "group": group, "n_A": a["n"],
                     "excess_A": a[f"excess_{PRIMARY}"], "z_A": a[f"z_{PRIMARY}"],
                     "n_C": None if c is None else c["n"], "excess_C": None if c is None else c[f"excess_{PRIMARY}"],
                     "z_C": None if c is None else c[f"z_{PRIMARY}"],
                     "enough_events": enough, "pass_A": z_ok, "same_sign_C": c_ok,
                     "verdict": "PASS" if (z_ok and c_ok) else ("fails C" if z_ok else
-                               ("REVERSED (loses at 3.2 SE)" if reverse else ("too few events" if not enough else "no edge")))})
+                               ("REVERSED (significantly worse than random)" if reverse else ("too few events" if not enough else "no edge")))})
     return pd.DataFrame(out)

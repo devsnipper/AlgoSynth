@@ -55,3 +55,17 @@ Then the pass bar from `SMC_STRATEGY.md`: positive in both parts of the data, at
 ## Build order
 
 Simplest first: 2, 1, 3, 5, 7, 8, 9, 6, 4, with look-ahead tests for each. Setup 10 reuses existing code.
+
+## Addendum: spike-free universe (written before running it)
+
+Same ten setups, same blocks A and C, same rules (primary 3 h excess, clustering of 12 candles, at least 300 events in
+block A, same sign in block C, block B closed), on the 14 instruments downloaded after `tools/check_spreads.py`:
+Step Index (and 200, 300, 400, 500), Range Break 100 and 200, Multi Step 2, 3 and 4, Volatility 10, 25, 75 and 100.
+
+- **Groups** replace Boom/Crash: all, Step, Range Break, Multi Step, Volatility.
+- **Cells:** 10 setups x (2 biases, 1 for setup 6) x 5 groups = 95 per block.
+- **Threshold raised to z >= 3.4.** With 57 cells on Boom/Crash and 95 here, the program tests 152 cells; a family-wise
+  error of 5% divided by 152 corresponds to z of about 3.4. The Boom/Crash verdicts stay as published (threshold 3.2 on
+  57 cells; none passed, so a stricter threshold would not change them).
+- **Exploratory trade test** (fixed design, see `EXPLORATORY_TRADES.md`) is run on the same universe and does not select.
+- Ledger keys of this universe are prefixed `spikefree:` so the two test counts stay separate.

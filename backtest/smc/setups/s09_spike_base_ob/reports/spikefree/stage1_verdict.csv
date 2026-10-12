@@ -1,0 +1,11 @@
+setup,bias,group,n_A,excess_A,z_A,n_C,excess_C,z_C,enough_events,pass_A,same_sign_C,verdict
+s09_spike_base_ob,none,all,150,0.14627963905193303,0.5266760117407716,525,0.11376143059507865,0.7847339471093964,False,False,True,too few events
+s09_spike_base_ob,none,Step,0,,,0,,,False,False,False,too few events
+s09_spike_base_ob,none,Range Break,150,0.14627963905193303,0.5266760117407716,525,0.11376143059507865,0.7847339471093964,False,False,True,too few events
+s09_spike_base_ob,none,Multi Step,0,,,0,,,False,False,False,too few events
+s09_spike_base_ob,none,Volatility,0,,,0,,,False,False,False,too few events
+s09_spike_base_ob,h1,all,111,0.19410418894928325,0.5724361090304804,381,0.0763927938691658,0.47509567252981294,False,False,True,too few events
+s09_spike_base_ob,h1,Step,0,,,0,,,False,False,False,too few events
+s09_spike_base_ob,h1,Range Break,111,0.19410418894928325,0.5724361090304804,381,0.0763927938691658,0.47509567252981294,False,False,True,too few events
+s09_spike_base_ob,h1,Multi Step,0,,,0,,,False,False,False,too few events
+s09_spike_base_ob,h1,Volatility,0,,,0,,,False,False,False,too few events

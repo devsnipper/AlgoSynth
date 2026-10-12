@@ -25,7 +25,6 @@ ATR_STOP = 2.0
 RR = 2.0
 HOLD_H = 3.0
 CONTROL_ORDERS = 4000          # random orders per symbol and bias for the control
-GROUPS = study.GROUPS
 
 
 def make_orders(ctx, m5, t_idx, directions) -> pd.DataFrame:
@@ -86,15 +85,15 @@ def summarize(tr: pd.DataFrame) -> dict:
             "avg_R_at_stop_level": tr["r_level"].mean(), "worst_R": r.min(), "avg_loss_R": r[r < 0].mean() if (r < 0).any() else np.nan}
 
 
-def study_trades(setup, symbols: list, controls: dict, blocks=("A", "C")) -> pd.DataFrame:
+def study_trades(setup, symbols: list, controls: dict, blocks=("A", "C"), universe: str = "boomcrash") -> pd.DataFrame:
     """One row per (block, bias, group) for one setup; blocks also include the pooled "A+C".
     `controls` = {(bias, symbol, block): DataFrame of control trades}."""
     biases = ("h1",) if not setup.uses_bias else study.BIASES
     rows = []
     for bias in biases:
         trades = {(s, b): setup_trades(setup, s, bias, b) for s in symbols for b in blocks}
-        for gname, prefix in GROUPS.items():
-            syms = [s for s in symbols if prefix is None or s.startswith(prefix)]
+        for gname, prefix in study.group_defs(universe).items():
+            syms = [s for s in symbols if study.in_group(s, prefix)]
             for label, bl in [(b, (b,)) for b in blocks] + [("+".join(blocks), tuple(blocks))]:
                 parts = [trades[(s, b)] for s in syms for b in bl if not trades[(s, b)].empty]
                 tr = pd.concat(parts, ignore_index=True) if parts else pd.DataFrame()

@@ -30,7 +30,7 @@ def get(name: str) -> Setup:
     return setups[matches[0]]
 
 
-def report_dir(name: str) -> str:
-    path = os.path.join(_DIR, name, "reports")
+def report_dir(name: str, sub: str = "") -> str:
+    path = os.path.join(_DIR, name, "reports", sub)
     os.makedirs(path, exist_ok=True)
     return path
