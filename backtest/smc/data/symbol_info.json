@@ -1,0 +1,82 @@
+{
+  "Boom 300 Index": {
+    "point": 0.001,
+    "digits": 3,
+    "contract_size": 1.0,
+    "volume_min": 0.5,
+    "volume_step": 0.01,
+    "stops_level": 1668
+  },
+  "Boom 500 Index": {
+    "point": 0.001,
+    "digits": 3,
+    "contract_size": 1.0,
+    "volume_min": 0.2,
+    "volume_step": 0.01,
+    "stops_level": 1173
+  },
+  "Boom 600 Index": {
+    "point": 0.001,
+    "digits": 3,
+    "contract_size": 1.0,
+    "volume_min": 0.2,
+    "volume_step": 0.01,
+    "stops_level": 1530
+  },
+  "Boom 900 Index": {
+    "point": 0.001,
+    "digits": 3,
+    "contract_size": 1.0,
+    "volume_min": 0.2,
+    "volume_step": 0.01,
+    "stops_level": 1287
+  },
+  "Boom 1000 Index": {
+    "point": 0.0001,
+    "digits": 4,
+    "contract_size": 1.0,
+    "volume_min": 0.2,
+    "volume_step": 0.01,
+    "stops_level": 26160
+  },
+  "Crash 300 Index": {
+    "point": 0.001,
+    "digits": 3,
+    "contract_size": 1.0,
+    "volume_min": 0.5,
+    "volume_step": 0.01,
+    "stops_level": 2205
+  },
+  "Crash 500 Index": {
+    "point": 0.001,
+    "digits": 3,
+    "contract_size": 1.0,
+    "volume_min": 0.2,
+    "volume_step": 0.01,
+    "stops_level": 927
+  },
+  "Crash 600 Index": {
+    "point": 0.001,
+    "digits": 3,
+    "contract_size": 1.0,
+    "volume_min": 0.2,
+    "volume_step": 0.01,
+    "stops_level": 2394
+  },
+  "Crash 900 Index": {
+    "point": 0.001,
+    "digits": 3,
+    "contract_size": 1.0,
+    "volume_min": 0.2,
+    "volume_step": 0.01,
+    "stops_level": 1740
+  },
+  "Crash 1000 Index": {
+    "point": 0.0001,
+    "digits": 4,
+    "contract_size": 1.0,
+    "volume_min": 0.2,
+    "volume_step": 0.01,
+    "stops_level": 7620
+  }
+}
