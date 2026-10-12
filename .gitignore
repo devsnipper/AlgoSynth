@@ -17,3 +17,6 @@ notebook.ipynb
 # OS
 .DS_Store
 Thumbs.db
+
+# Donnees historiques backtest (regenerables avec download_data.py)
+backtest/**/data/*.csv
