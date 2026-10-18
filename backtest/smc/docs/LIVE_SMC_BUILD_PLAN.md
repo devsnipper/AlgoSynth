@@ -1,6 +1,6 @@
 # Building plan: three SMC techniques running live (demo), next to the existing EMA bot
 
-Status: **proposal, waiting for approval. No code has been written.**
+Status: **approved by the owner on 18 Oct 2026, with one change (D3, below). Branch `feature/smc-live` created. Implementation starts once the guard is adjusted (D7).**
 
 ## 1. Goal
 
@@ -27,11 +27,11 @@ Recommended answer first.
 |---|---|---|
 | D1 | Instruments | The bot's six: Boom 150, Boom 500, Boom 600, Boom 900, Crash 150, Crash 500 (from `config.SYMBOLS`). The list is a setting, so forex or gold can be added later without code changes. |
 | D2 | Architecture | A **separate process** (`smc_bot.py`) next to `main.py`. An SMC bug cannot crash the EMA bot, each restarts on its own, `main.py` stays almost untouched. |
-| D3 | EMA bot | Keep it running unchanged as the **control**, tagged `EMA_M5` in the CSV. |
+| D3 | EMA bot | **CHANGED by the owner:** the EMA bot is **stopped** when the SMC bot goes up. It stays in the repository, untouched, and is not run in parallel. Its history stays in the CSV as `EMA_M5`. No edit to `main.py`, `trader.py`, `reporter.py` or `notifier.py` is needed. |
 | D4 | Risk per SMC trade | Target **1.00 $** (0.01% of the 10,000 $ demo). Skip the signal if the minimum lot already risks more than **2.50 $**. |
 | D5 | Limits | 1 SMC position per symbol; 4 open at once; 3 new entries per day; pause until Monday after **-4R** in a week; time stop at **24 h**. |
-| D6 | Where to build | A branch `feature/smc-live` in this folder (the bot is stopped, so switching branches is safe). Merge only after the tests pass. |
-| D7 | Guard | The protection hook in `.claude/` blocks edits outside `backtest/`. **You** must lift it for the build, and put it back afterwards. I cannot edit it. |
+| D6 | Where to build | **Done:** branch `feature/smc-live` exists. The owner checks it out (the guard blocks that git command for Claude). Merge into `main` only after the tests pass. |
+| D7 | Guard | The hook blocks edits outside `backtest/`. **Replace it by "guard v2"**, which also allows the new paths (`techniques/`, `smc_live/`, `smc_tests/`, `smc_bot.py`) and keeps `main.py`, `config.py`, `strategy.py`, `trader.py`, `notifier.py`, `reporter.py` and `.env` protected. Only the owner can edit it. |
 | D8 | Overlap | When two techniques signal on the same symbol at the same time, the first one trades and the other is logged as `skipped: symbol_busy`. Skipped signals keep their entry/SL/TP so I can replay them offline and compare the techniques fairly. |
 
 ## 4. The three techniques (full text goes in `techniques/SETUPS.md`)
@@ -82,11 +82,12 @@ smc_live/                        impure glue
   executor.py                    market order with SL/TP, retcodes (10027, 10016, 10036), refusal back-off
   position_monitor.py            non-blocking: follows open SMC positions, detects closes, applies the 24 h time stop
   notify.py                      Telegram messages: signal, execution, close, alerts (send only, never polls)
+  smc_report.py                  daily and weekly summaries per technique
   tradelog.py                    all CSV writing, header migration, file lock
   state.json                     signal ids already handled (survives restarts), weekly counters
 
 smc_bot.py                       entry point: connect, check Algo Trading, run the loop
-tests/                           tests for techniques/ and smc_live/ (hand-built cases + look-ahead checks)
+smc_tests/                       tests for techniques/ and smc_live/ (hand-built cases + look-ahead checks)
 ```
 
 **Signal.** One object with: `signal_id`, `technique`, `symbol`, `direction`, `trigger_time`, `entry_ref`, `sl`, `tp`,
@@ -119,18 +120,16 @@ entry_ref, sl, tp, planned_rr, risk_usd_est, lot_est, zone_lo, zone_hi, bias_dir
 Migration: the old file is copied to `logs/trades_backup_<date>.csv`, then rewritten with the new header and empty new
 fields; old rows get `technique = EMA_M5`. Nothing is deleted.
 
-Small edits to existing files, each listed so you can review them:
-- `trader.py`: write `technique = EMA_M5` (and the other fields it knows) on its rows.
-- `reporter.py`: the daily PnL / trade-count loaders only count `EMA_M5` rows, so SMC trades never trigger the EMA bot's
-  +3 $ stop; reports gain a per-technique section.
-- `notifier.py`: nothing to change (the SMC system has its own `notify.py`).
-- `main.py`: nothing to change.
+Edits to existing files: **none.** With the EMA bot stopped (D3), `main.py`, `trader.py`, `reporter.py` and `notifier.py`
+stay exactly as they are. The only change to existing data is the CSV migration above (a copy is kept). If the EMA bot is
+ever restarted, its rows are written with the 8 old columns and an empty `technique`, which is read as `EMA_M5`.
+The SMC system sends its own daily and weekly summaries per technique (`smc_live/smc_report.py`).
 
 ## 8. Work plan and gates
 
 | Phase | What | Gate to continue |
 |---|---|---|
-| P0 | You lift the guard, switch Algo Trading on in MT5, confirm D1 to D8. | Your written approval of this plan. |
+| P0 | Plan approved (done). Owner: install guard v2 and check out the branch. Algo Trading is switched on later, at P5. | Guard v2 active and the branch checked out. |
 | P1 | `techniques/` + `SETUPS.md` + tests: hand-built cases, a look-ahead check on real data, a parity check against the backtest code. | All tests pass. |
 | P2 | Replay the techniques on 29 months of history (backtest side). Measure signals per week per technique and the R distribution. Caps are tuned from this, not the rules. | Signals per week are in a workable range; you review the numbers. |
 | P3 | `smc_live/` + `smc_bot.py` + CSV migration. One demo test order of 0.2 lot to check what the broker accepts: SL and TP at opening, TP refused or not, SL change refused or not, comment length, fill mode. | The broker test is documented; the plan is adjusted to what it shows. |
