@@ -204,5 +204,23 @@
     "volume_step": 0.01,
     "stops_level": 138,
     "group": "spikefree"
+  },
+  "Boom 150 Index": {
+    "point": 0.0001,
+    "digits": 4,
+    "contract_size": 1.0,
+    "volume_min": 0.5,
+    "volume_step": 0.01,
+    "stops_level": 1000,
+    "group": "boomcrash"
+  },
+  "Crash 150 Index": {
+    "point": 0.0001,
+    "digits": 4,
+    "contract_size": 1.0,
+    "volume_min": 0.5,
+    "volume_step": 0.01,
+    "stops_level": 1000,
+    "group": "boomcrash"
   }
 }

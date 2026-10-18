@@ -51,9 +51,10 @@ def resample(m15: pd.DataFrame, rule: str) -> pd.DataFrame:
 
 def main():
     which = sys.argv[1] if len(sys.argv) > 1 else "boomcrash"
-    if which not in SETS:
-        print("unknown set; choose", list(SETS))
-        sys.exit(2)
+    if which in SETS:
+        names = SETS[which]
+    else:                                               # explicit symbol names: download_history.py "Boom 150 Index" ...
+        names, which = sys.argv[1:], "boomcrash"
     if not mt5.initialize(login=int(os.getenv("MT5_LOGIN")), password=os.getenv("MT5_PASSWORD"),
                           server=os.getenv("MT5_SERVER")):
         print(f"initialize() failed: {mt5.last_error()}")
@@ -63,7 +64,7 @@ def main():
     info_path = os.path.join(DATA_DIR, "symbol_info.json")
     info = json.load(open(info_path)) if os.path.exists(info_path) else {}
     rows = []
-    for s in SETS[which]:
+    for s in names:
         if not mt5.symbol_select(s, True) or mt5.symbol_info(s) is None:
             print(f"{s}: symbol unavailable")
             continue

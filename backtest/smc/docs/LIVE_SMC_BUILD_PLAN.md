@@ -147,3 +147,23 @@ The SMC system sends its own daily and weekly summaries per technique (`smc_live
 - Results at P6 are likely to match the research: close to zero or negative.
 - The new process uses the same MT5 terminal as the EMA bot. They do not interfere (hedging account), but Algo Trading
   must stay on for both.
+
+## 10. Results of P1 and P2 (18 Oct 2026)
+
+**P1 done.** `techniques/` (A, B, C), `techniques/SETUPS.md`, and `smc_tests/` (22 checks: hand-built cases, identical to
+the backtest code on 4,255 order-block zones, signal geometry on real data, no look-ahead by truncation).
+
+**P2 done** (`backtest/smc/tools/replay_live_techniques.py`, report in `backtest/smc/reports/live_replay/`): the live
+code replayed on 48 weeks of the bot's six symbols with M5 fills.
+
+1. **The risk numbers of section 3 (D4) do not work.** At the broker's minimum lot, these signals risk **4 to 13 $** per
+   trade (median: A 5.2 $, C 5.6 $, B 7.8 $). With a 1 $ target and a 2.50 $ limit, 1,724 of 1,756 signals are rejected
+   and nothing would ever trade. Proposed: target 5 $, accepted up to 12 $ (0.05 to 0.12% of the 10,000 $ demo).
+2. **Technique B is far too frequent**: 33 signals a week over the six symbols, 12 trades a week under the caps, 90% of all
+   trades; it also triggers the weekly -4R breaker 433 times. A and C together give only about 1.4 trades a week.
+   Measured alternatives for B (signals a week over six symbols, after the risk limit): as specified 27.7; previous-day
+   and equal levels only 17.0; those levels in the H4-bias direction only 4.6; those levels in the bias direction and
+   in the matching half of the H4 range 2.5.
+3. **Results on history (not significant):** capped trades: C 44 trades +0.20 R average, A 23 trades -0.08 R, B 574
+   trades -0.02 R, all 641 trades -6 R in total. Each technique on its own over all signals: C +0.00 R (113), A -0.14 R
+   (65), B -0.04 R (1,326). Sample sizes are small and the differences are within chance.
