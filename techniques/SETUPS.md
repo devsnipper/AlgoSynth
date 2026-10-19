@@ -50,7 +50,8 @@ Everything in A, with extra conditions:
 1. The order block's move contains a fair value gap in the same direction.
 2. **Buys only in the discount half** of the H4 range (below its midpoint), **sells only in the premium half**. The range
    runs from the last confirmed H4 swing low to the last confirmed H4 swing high.
-3. **Take profit:** the other end of the H4 range, capped at 4R. If that end is closer than 2R, the signal is skipped.
+3. **Take profit:** the other end of the H4 range, capped at 3R. If that end is closer than 2R, the signal is skipped.
+   (Reward-to-risk is therefore always between 1:2 and 1:3 for C, 1:2 for A and 1:3 for B.)
 4. The "next H4 swing" room check of A is replaced by this range check.
 
 ## How often they signal (measured on 34 months of history, per symbol, before any risk filter)

@@ -40,7 +40,7 @@ def _():
                 if tech.name == "SMC_B_SWEEP_REV":
                     assert abs(s.rr - 3.0) < 1e-9
                 if tech.name == "SMC_C_PD_OB_FVG":
-                    assert 2.0 - 1e-9 <= s.rr <= 4.0 + 1e-9
+                    assert 2.0 - 1e-9 <= s.rr <= 3.0 + 1e-9, "C targets between 1:2 and 1:3"
             counts[tech.name] = counts.get(tech.name, 0) + len(sigs)
     assert all(v > 0 for v in counts.values()), counts
     return ", ".join(f"{k.split('_')[1]}={v}" for k, v in sorted(counts.items())) + f" signals on {len(SYMBOLS)} symbols"

@@ -167,3 +167,14 @@ code replayed on 48 weeks of the bot's six symbols with M5 fills.
 3. **Results on history (not significant):** capped trades: C 44 trades +0.20 R average, A 23 trades -0.08 R, B 574
    trades -0.02 R, all 641 trades -6 R in total. Each technique on its own over all signals: C +0.00 R (113), A -0.14 R
    (65), B -0.04 R (1,326). Sample sizes are small and the differences are within chance.
+
+## 11. Decisions of 19 Oct 2026
+
+- **Risk.** The owner does not want to reason like the old bot (0.30 $ per trade) any more: risk is expressed as
+  reward-to-risk, 1:2 or 1:3. Taken as agreement with the dollar figures of section 10: target **5 $**, accepted up to
+  **12 $** per trade (settings in `smc_live/config_smc.py`). Technique C's target cap is lowered from 4R to **3R**.
+- **Technique B** stays exactly as specified: this is a test phase, signal quality will be judged from the data.
+- **Consequence for the limits.** B alone would use up shared limits (about 12 trades a week under the caps), so **each
+  technique gets its own budget**: its own daily limit (A 2, C 2, B 3 entries a day) and its own weekly breaker (-4R per
+  technique). Shared limits stay for open positions (4 in total, 1 per symbol). Every signal, traded or not, is written to
+  `logs/signals.csv`.

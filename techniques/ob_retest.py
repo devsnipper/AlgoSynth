@@ -38,7 +38,7 @@ def first_trigger(c, h, l, d: int, zone_lo: float, zone_hi: float, k0: int, k1: 
 
 
 def ob_retest_signals(snap: Snapshot, technique: str, *, require_fvg: bool, premium_discount: bool,
-                      min_room_rr: float = 1.5, rr: float = 2.0, max_rr_c: float = 4.0) -> list:
+                      min_room_rr: float = 1.5, rr: float = 2.0, max_rr_c: float = 3.0) -> list:
     p: Prepared = prepare(snap)
     out = []
     for z in p.h1_zones:
