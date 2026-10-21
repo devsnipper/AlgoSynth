@@ -1,3 +1,5 @@
 state.json
 state.json.tmp
+telegram_pending.json
+telegram_pending.json.tmp
 __pycache__/

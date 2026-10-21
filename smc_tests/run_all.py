@@ -11,7 +11,8 @@ env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
 code = 0
 total = passed = 0
 for name in sorted(f for f in os.listdir(HERE) if f.startswith("test_") and f.endswith(".py")):
-    out = subprocess.run([sys.executable, os.path.join(HERE, name)], env=env, capture_output=True, text=True)
+    out = subprocess.run([sys.executable, os.path.join(HERE, name)], env=env, capture_output=True, text=True,
+                         encoding="utf-8", errors="replace")
     p, f = out.stdout.count("PASS  "), out.stdout.count("FAIL  ")
     total, passed = total + p + f, passed + p
     print(f"{name:<34} {p} passed, {f} failed")
