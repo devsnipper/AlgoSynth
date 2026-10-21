@@ -6,8 +6,10 @@ import os
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
-# --- instruments: the six the EMA bot traded (kept here, not imported, so the two systems stay independent)
-SYMBOLS = ["Boom 150 Index", "Boom 500 Index", "Boom 600 Index", "Boom 900 Index", "Crash 150 Index", "Crash 500 Index"]
+# --- instruments: the six the EMA bot traded (kept here, not imported, so the two systems stay independent),
+# plus Boom/Crash 300 and 1000 (added after the first live days; their backtest data is in backtest/smc/data)
+SYMBOLS = ["Boom 150 Index", "Boom 300 Index", "Boom 500 Index", "Boom 600 Index", "Boom 900 Index", "Boom 1000 Index",
+           "Crash 150 Index", "Crash 300 Index", "Crash 500 Index", "Crash 1000 Index"]
 
 # --- techniques
 MAGIC = {"SMC_A_OB_TREND": 223401, "SMC_B_SWEEP_REV": 223402, "SMC_C_PD_OB_FVG": 223403}
