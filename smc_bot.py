@@ -46,8 +46,7 @@ def main(argv=None) -> int:
 
     if not connect():
         return 1
-    notifier = notify.Notifier(dry=args.dry_notify,
-                               queue_path=os.path.join(os.path.dirname(cfg.STATE_PATH), "telegram_pending.json"))
+    notifier = notify.Notifier(dry=args.dry_notify)
     log = TradeLog(cfg.LOG_DIR)
     notes = log.ensure_headers()
     state = State(cfg.STATE_PATH)
@@ -81,7 +80,6 @@ def main(argv=None) -> int:
                 for o in outcomes:
                     print(f"[SMC] {sym}: {o.get('status')} {o.get('reason', '')} {o['signal_id']}")
                 state.save()
-            notifier.flush()                                             # resend messages Telegram refused earlier
             if args.once:
                 break
 
